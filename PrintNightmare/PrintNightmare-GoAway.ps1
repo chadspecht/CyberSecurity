@@ -23,6 +23,9 @@ If defined, will output 'Success' on success.
 .PARAMETER OutResult
 If defined, will output 'Success' on success and 'Success' on success.
 
+.PARAMETER CheckStatus
+If defined, will check the status of the ACL. Use OutResult to display output or LogPath to save output.
+
 .EXAMPLE
 PrintNightmare-GoAway -Logpath C:\PSLogFolder -OutResult -AddACL
 Logs the output to C:\PSLogFolder, adds the ACL to block SYSTEM access to print spooler directory and outputs the result
@@ -37,7 +40,7 @@ Adds the ACL to block SYSTEM access to print spooler directory
 
 .NOTES
 Source of script: https://blog.truesec.com/2021/06/30/fix-for-printnightmare-cve-2021-1675-exploit-to-keep-your-print-servers-running-while-a-patch-is-not-available/ 
-Created by Chaim Black at Intrust IT on 7/1/2021. https://www.intrust-it.com/
+Created by Chaim Black at Intrust IT on 7/2/2021. https://www.intrust-it.com/
 Complete testing on all operating systems has NOT been done on this script yet, so run this at your own risk and further research it.
 #>
 function PrintNightmare-GoAway {
@@ -54,8 +57,15 @@ function PrintNightmare-GoAway {
         [Parameter()]
         [Switch]$OutSuccess,
         [Parameter()]
-        [Switch]$OutResult
+        [Switch]$OutResult,
+        [Parameter()]
+        [Switch]$CheckStatus
     )
+
+    if($AddACL -and $RemoveACL) {
+        Write-Host "Error: Cannot have both AddACL and RemoveACL together." -ForegroundColor Red
+        Break
+    }
 
     if ($Logpath) {
         $date = (get-date).toString("yyyy-MM-dd hh-mm-ss tt")
@@ -64,8 +74,9 @@ function PrintNightmare-GoAway {
             New-Item -ItemType Directory -Force -Path $Logpath | Out-Null
         }
 
-        $LogFileOldACL = $Logpath + '\' + $date + ' - OldACL.txt'
-        $LogFileNewACL = $Logpath + '\' + $date + ' - NewACL.txt'
+        $LogFileOldACL     = $Logpath + '\' + $date + ' - OldACL.txt'
+        $LogFileNewACL     = $Logpath + '\' + $date + ' - NewACL.txt'
+        $LogFileCurrentACL = $Logpath + '\' + $date + ' - CurrentACL.txt'
     }
 
 
@@ -142,6 +153,27 @@ function PrintNightmare-GoAway {
             if ($OutSuccess) {
                 if ($Result -like "Success") {$Result}
             }
+        }
+    }
+
+    if ($CheckStatus) {
+        $Path = "C:\Windows\System32\spool\drivers"
+        $Acl = Get-Acl $Path
+        if ($Logpath) {
+           $Acl | Select-object * |  Out-File $LogFileCurrentACL 
+        }
+        
+        if ($OutResult) {
+            $VerifyACL = $ACL.AccessToString[0..32] -join ''
+
+            if ($VerifyACL -like "*NT AUTHORITY\SYSTEM Deny  Modify*") {
+                $Result = 'ACL Applied'
+            }
+            Else {
+                $Result = 'ACL Not Applied'
+            }
+
+            if ($OutResult) {$Result}            
         }
     }
 }
