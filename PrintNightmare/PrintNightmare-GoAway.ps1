@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-Creates or removes ACL to block SYSTEM access to print spooler directory in response to CVE-2021-1675.
+Creates or removes ACL to block SYSTEM access to print spooler directory in response to CVE 2021 34527.
 
 .DESCRIPTION
-Creates or removes ACL to block SYSTEM access to print spooler directory in response to CVE-2021-1675.
+Creates or removes ACL to block SYSTEM access to print spooler directory in response to CVE 2021 34527.
 
 .PARAMETER Logpath
 If defined, will use this location to log before and after ACL change. Will output two txt files. One with the current ACL prior to making changes and another one with the ACL information after the ACL change.
@@ -42,6 +42,8 @@ Adds the ACL to block SYSTEM access to print spooler directory
 Source of script: https://blog.truesec.com/2021/06/30/fix-for-printnightmare-cve-2021-1675-exploit-to-keep-your-print-servers-running-while-a-patch-is-not-available/ 
 Created by Chaim Black at Intrust IT on 7/2/2021. https://www.intrust-it.com/
 Complete testing on all operating systems has NOT been done on this script yet, so run this at your own risk and further research it.
+
+Update: Updated ACL path per Fabio Viggiani on blog post thanks to _Dadministrator_ to avoid errors when running this as SYSTEM.
 #>
 function PrintNightmare-GoAway {
     [CmdletBinding()]
@@ -82,7 +84,7 @@ function PrintNightmare-GoAway {
 
     if ($AddACL) {
         $Path = "C:\Windows\System32\spool\drivers"
-        $Acl = Get-Acl $Path
+        $Acl = (Get-Item $Path).GetAccessControl('Access')
         if ($Logpath) {
            $Acl | Select-object * |  Out-File $LogFileOldACL 
         }
@@ -120,7 +122,7 @@ function PrintNightmare-GoAway {
 
     if ($RemoveACL) {
         $Path = "C:\Windows\System32\spool\drivers"
-        $Acl = Get-Acl $Path
+        $Acl = (Get-Item $Path).GetAccessControl('Access')
         if ($Logpath) {
            $Acl | Select-object * |  Out-File $LogFileOldACL 
         }
@@ -129,7 +131,7 @@ function PrintNightmare-GoAway {
         Set-Acl $Path $Acl
         
         #Verify
-        $FixACL = Get-Acl "C:\Windows\System32\spool\drivers"
+        $FixACL = (Get-Item $Path).GetAccessControl('Access')
         if ($Logpath) {
            $FixACL | Select-object * |  Out-File $LogFileNewACL
         }
@@ -158,7 +160,7 @@ function PrintNightmare-GoAway {
 
     if ($CheckStatus) {
         $Path = "C:\Windows\System32\spool\drivers"
-        $Acl = Get-Acl $Path
+        $Acl = (Get-Item $Path).GetAccessControl('Access')
         if ($Logpath) {
            $Acl | Select-object * |  Out-File $LogFileCurrentACL 
         }
@@ -173,7 +175,7 @@ function PrintNightmare-GoAway {
                 $Result = 'ACL Not Applied'
             }
 
-            if ($OutResult) {$Result}            
+            if ($OutResult) {$Result}
         }
     }
 }
