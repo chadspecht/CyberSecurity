@@ -6,7 +6,9 @@ Creates or removes ACL to block SYSTEM access to print spooler directory in resp
 Creates or removes ACL to block SYSTEM access to print spooler directory in response to CVE 2021 34527.
 
 .PARAMETER Logpath
-If defined, will use this location to log before and after ACL change. Will output two txt files. One with the current ACL prior to making changes and another one with the ACL information after the ACL change.
+If defined, will use this location to log before and after ACL change. 
+Will output two txt files. One with the current ACL prior to making changes and another one with the ACL information after the ACL change. 
+Output is raw data in json format and can be viewed using 'Get-Content -Raw <Path> | ConvertFrom-Json'
 
 .PARAMETER AddACL
 Adds the ACL to block SYSTEM access to print spooler directory
@@ -76,9 +78,9 @@ function PrintNightmare-GoAway {
             New-Item -ItemType Directory -Force -Path $Logpath | Out-Null
         }
 
-        $LogFileOldACL     = $Logpath + '\' + $date + ' - OldACL.txt'
-        $LogFileNewACL     = $Logpath + '\' + $date + ' - NewACL.txt'
-        $LogFileCurrentACL = $Logpath + '\' + $date + ' - CurrentACL.txt'
+        $LogFileOldACL     = $Logpath + '\' + $date + ' - OldACL.json'
+        $LogFileNewACL     = $Logpath + '\' + $date + ' - NewACL.json'
+        $LogFileCurrentACL = $Logpath + '\' + $date + ' - CurrentACL.json'
     }
 
 
@@ -86,7 +88,7 @@ function PrintNightmare-GoAway {
         $Path = "C:\Windows\System32\spool\drivers"
         $Acl = (Get-Item $Path).GetAccessControl('Access')
         if ($Logpath) {
-           $Acl | Select-object * |  Out-File $LogFileOldACL 
+           $Acl | Select-object * |  ConvertTo-Json | Out-File $LogFileOldACL 
         }
         $Ar = New-Object  System.Security.AccessControl.FileSystemAccessRule("System", "Modify", "ContainerInherit, ObjectInherit", "None", "Deny")
         $Acl.AddAccessRule($Ar) | Out-Null
@@ -95,7 +97,7 @@ function PrintNightmare-GoAway {
         #Verify
         $FixACL = Get-Acl "C:\Windows\System32\spool\drivers"
         if ($Logpath) {
-           $FixACL | Select-object * |  Out-File $LogFileNewACL
+           $FixACL | Select-object * |  ConvertTo-Json | Out-File $LogFileNewACL
         }
         
         if ($OutError -or $OutSuccess -or $OutResult) {
@@ -124,7 +126,7 @@ function PrintNightmare-GoAway {
         $Path = "C:\Windows\System32\spool\drivers"
         $Acl = (Get-Item $Path).GetAccessControl('Access')
         if ($Logpath) {
-           $Acl | Select-object * |  Out-File $LogFileOldACL 
+           $Acl | Select-object * |  ConvertTo-Json | Out-File $LogFileOldACL 
         }
         $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule("System", "Modify", "ContainerInherit, ObjectInherit", "None", "Deny")
         $Acl.RemoveAccessRule($Ar) | Out-Null
@@ -133,7 +135,7 @@ function PrintNightmare-GoAway {
         #Verify
         $FixACL = (Get-Item $Path).GetAccessControl('Access')
         if ($Logpath) {
-           $FixACL | Select-object * |  Out-File $LogFileNewACL
+           $FixACL | Select-object * |  ConvertTo-Json | Out-File $LogFileNewACL
         }
         
         if ($OutError -or $OutSuccess -or $OutResult) {
@@ -162,7 +164,7 @@ function PrintNightmare-GoAway {
         $Path = "C:\Windows\System32\spool\drivers"
         $Acl = (Get-Item $Path).GetAccessControl('Access')
         if ($Logpath) {
-           $Acl | Select-object * |  Out-File $LogFileCurrentACL 
+           $Acl | Select-object * |  ConvertTo-Json | Out-File $LogFileCurrentACL 
         }
         
         if ($OutResult) {
